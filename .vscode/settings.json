@@ -1,0 +1,26 @@
+{
+
+  
+  "terminal.integrated.enableVisualBell": true,
+  "terminal.integrated.copyOnSelection": true,
+  "terminal.integrated.cursorBlinking": true,
+  
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.enableImages": true,
+  "terminal.integrated.focusAfterRun": "terminal",
+  "terminal.integrated.fontLigatures.enabled": true,
+  "terminal.integrated.hideOnStartup": "whenEmpty",
+  "terminal.integrated.shellIntegration.environmentReporting": true,
+  "terminal.integrated.suggest.enabled": true,
+  "terminal.integrated.tabs.defaultColor": "terminal.ansiGreen",
+  "esphome.dashboardUri": "https://192.168.1.102:6052/",
+  "esphome.validator": "dashboard",
+  "terminal.integrated.allowMnemonics": true,
+  "terminal.integrated.automationProfile.linux": {
+    "path": "bash",
+    
+    "args": [
+      "-l"
+    ]
+  },
+}
