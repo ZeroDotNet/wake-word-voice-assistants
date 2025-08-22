@@ -1,0 +1,137 @@
+substitutions:
+  name: esp32-bluetooth-proxy
+  friendly_name: ESP32-BlueProxy
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  comment: "ESP32 Proxy Device for BLE Scanning and Presence Detection"
+  min_version: 2025.5.0
+  name_add_mac_suffix: true
+  
+
+  area:
+    id: "esp32_devices"
+    name: "ESP32 Devices"
+  areas:
+  - id: "acuario"
+    name: "Acuario"
+  - id: "oficina"
+    name: "Oficina"
+  - id: "living"
+    name: "Living"
+  # devices:
+  #   - id: "${name}_living"
+  #     name: "${friendly_name} Living"
+  #     #description: "Device for BLE Scanning and Presence Detection"
+  #     area_id: "living"
+  #   - id: "${name}_office"
+  #     name: "${friendly_name} Oficina"
+  #     #description: "Device for BLE Scanning and Presence Detection"
+  #     area_id: "oficina"
+  #   - id: "${name}_aquarium"
+  #     name: "${friendly_name} Acuario"
+  #     #description: "Device for BLE Scanning and Presence Detection"
+  #     area_id: "acuario"
+espnow:
+  id: my_espnow
+  auto_add_peer: True
+  enable_on_boot: True
+  on_broadcast: 
+    then:
+      - logger.log:
+          format: "[ESP-NOW] Sent to %s from %s: %s RSSI: %ddBm"
+          args:
+            - format_mac_address_pretty(info.des_addr).c_str()
+            - format_mac_address_pretty(info.src_addr).c_str()
+            - format_hex_pretty(data, size).c_str()
+            - info.rx_ctrl->rssi
+      # - homeassistant.event: 
+      #     event: esphome.espnow_broadcast_received
+      #     data:
+      #       message: !lambda 'return format_hex_pretty(data, size).c_str();'
+      #       sender: !lambda 'return format_mac_address_pretty(info.src_addr).c_str();'
+  on_receive:
+    then:
+      - logger.log:
+          format: "[ESP-NOW] Sent to %s from %s: %s RSSI: %ddBm"
+          args:
+            - format_mac_address_pretty(info.des_addr).c_str()
+            - format_mac_address_pretty(info.src_addr).c_str()
+            - format_hex_pretty(data, size).c_str()
+            - info.rx_ctrl->rssi
+      # - homeassistant.event: 
+      #     event: esphome.espnow_message_received
+      #     data:
+      #       message: !lambda 'return format_hex_pretty(data, size).c_str();'
+      #       sender: !lambda 'return format_mac_address_pretty(info.src_addr).c_str();'
+          
+ 
+
+web_server:
+  version: 3
+  include_internal: True
+  # js_url: https://unpkg.com/esphome-web-components@latest/dist/esphome-web-components.js
+  # css_url: https://unpkg.com/esphome-web-components@latest/dist/esphome-web-components.css
+
+api:
+  encryption:
+    key: !secret api_secret_esp32-bluetooth-proxy
+  on_client_connected: 
+    then:
+      - button.press: proxy_start_button
+  on_client_disconnected: 
+    then:
+      - button.press: proxy_stop_button
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # on_connect: 
+  #   then:
+  #     - button.press: proxy_start_button
+  # on_disconnect: 
+  #   then:
+  #     - button.press: proxy_stop_button
+logger:
+
+button:
+  - platform: template
+    name: "Start Scan"
+    id: proxy_start_button
+    icon: "mdi:bluetooth"
+    on_press:
+      then:
+        - logger.log: "Button start scanning..."
+        - esp32_ble_tracker.start_scan:  # Start scanning for BLE devices
+            id: my_esp32_ble_tracker
+  - platform: template
+    name: "Stop Scan"
+    id: proxy_stop_button
+    icon: "mdi:bluetooth-off"
+    on_press:
+      then:
+        - logger.log: "Button stop scanning..."
+        - esp32_ble_tracker.stop_scan:  # Stop scanning for BLE devices
+            id: my_esp32_ble_tracker
+
+
+esp32_ble_tracker:
+  id: my_esp32_ble_tracker
+  
+  scan_parameters:
+    # We currently use the defaults to ensure Bluetooth
+    # can co-exist with WiFi In the future we may be able to
+    # enable the built-in coexistence logic in ESP-IDF
+    #continuous: True
+    active: true
+
+bluetooth_proxy:
+  id: my_bluetooth_proxy
+  #connection_slots: 6
+  #cache_services: True
+  active: true

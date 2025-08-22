@@ -14,7 +14,8 @@
   "terminal.integrated.suggest.enabled": true,
   "terminal.integrated.tabs.defaultColor": "terminal.ansiGreen",
   "esphome.dashboardUri": "https://192.168.1.102:6052/",
-  "esphome.validator": "dashboard",
+  "esphome.validator": "local",
+  
   "terminal.integrated.allowMnemonics": true,
   "terminal.integrated.automationProfile.linux": {
     "path": "bash",

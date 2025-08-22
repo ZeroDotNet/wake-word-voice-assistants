@@ -3,7 +3,7 @@ esphome:
   friendly_name: M5Cardputer
 
 esp32:
-  board: esp32-s3-devkitc-1
+  board: m5stack-stamps3
   framework:
     type: arduino
 
@@ -36,7 +36,7 @@ i2s_audio:
 microphone:
   - platform: i2s_audio
     id: external_mic
-    adc_type: external  
+    adc_type: external
     i2s_din_pin: GPIO46
     pdm: true
 
@@ -104,7 +104,7 @@ binary_sensor:
 # Use ledc to control brightness of backlight with PWM (for float output)
 output:
   - platform: ledc
-    pin: GPIO38  # Same pin as backlight
+    pin: GPIO38 # Same pin as backlight
     id: backlight_output
     frequency: 50 Hz
     inverted: false
@@ -113,16 +113,16 @@ output:
 light:
   - platform: monochromatic
     name: "Backlight"
-    output: backlight_output  # Link to the correct output component
+    output: backlight_output # Link to the correct output component
     id: backlight
     restore_mode: RESTORE_AND_ON
     gamma_correct: 2.8
     default_transition_length: 1s
     flash_transition_length: 0s
-    disabled_by_default: False  
+    disabled_by_default: False
 
 # Add the time component
 time:
   - platform: sntp
     id: sntp_time
-    timezone: "America/Argentina/Buenos_Aires"  # Change to your timezone
+    timezone: "America/Argentina/Buenos_Aires"
