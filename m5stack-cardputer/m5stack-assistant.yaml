@@ -1,0 +1,212 @@
+substitutions:
+  # Device identifiers
+  device_name: "m5stack-assistant"
+  friendly_name: M5Stack Assistant
+  
+  # define colors like Color::BLACK here, use hex and do not use prefix color_
+  color_black: 0x000000
+  color_white: 0xFFFFFF
+  color_red: 0xFF0000
+  color_green: 0x00FF00
+  color_blue: 0x0000FF
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: m5stack-stamps3
+  flash_size: 8MB
+  framework:
+    type: esp-idf
+
+logger:
+
+# Enable the Home Assistant API. When a client connects, start the wake‑word engine;
+# when the client disconnects, stop the voice assistant to free up resources.
+api:
+  encryption:
+    key: !secret api_secret_esp32_cardputer
+    #key: "vsdNtGTYVPRY69CqHTYaDX5w2VBo3t717Q3AyQQ4wQ0="
+  on_client_connected:
+    - micro_wake_word.start:
+  on_client_disconnected:
+    - voice_assistant.stop:
+
+ota:
+  - platform: esphome
+    password: !secret ota_secret_esp32_cardputer
+    #password: "7de9a53025724080510a65387e321914"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+#   manual_ip:
+#     gateway: 192.168.1.1
+#     subnet: 255.255.255.0
+#     static_ip: 192.168.1.108
+#     dns1: 192.168.1.101
+#     dns2: 192.168.1.1
+
+captive_portal:
+
+# Shared I²S bus for microphone and speaker (Cardputer v1.1 pin map:contentReference[oaicite:1]{index=1})
+i2s_audio:
+  id: i2s_bus
+  i2s_lrclk_pin: GPIO43
+  i2s_bclk_pin: GPIO41
+
+# External PDM microphone SPM1423; DAT->G46, CLK->G43:contentReference[oaicite:2]{index=2}
+microphone:
+  - platform: i2s_audio
+    id: mic
+    adc_type: external
+    i2s_din_pin: GPIO46
+    i2s_audio_id: i2s_bus
+    pdm: true
+    sample_rate: 16000
+
+# External I²S speaker NS4168; SDATA->G42, BCLK/LRCLK shared:contentReference[oaicite:3]{index=3}
+speaker:
+  - platform: i2s_audio
+    id: spkr
+    i2s_audio_id: i2s_bus
+    dac_type: external
+    i2s_dout_pin: GPIO42
+    channel: mono
+    sample_rate: 16000
+    buffer_duration: 100ms
+
+# On‑device wake word detection (ESP‑IDF only)
+micro_wake_word:
+  id: mww
+  models:
+    - model: hey_jarvis
+  on_wake_word_detected:
+    - voice_assistant.start:
+        wake_word: !lambda return wake_word;
+
+# Voice assistant using the mic and speaker
+voice_assistant:
+  id: va
+  microphone: mic
+  speaker: spkr
+  noise_suppression_level: 2
+  auto_gain: 31dBFS
+  volume_multiplier: 2.0
+  on_listening:
+    - script.execute: show_listening
+  on_stt_vad_end:
+    - script.execute: show_thinking
+  on_tts_start:
+    - script.execute: show_replying
+  on_end:
+    - script.execute: show_idle
+  on_error:
+    - script.execute: show_error
+    - delay: 1s
+    - script.execute: show_idle
+
+# SPI bus for the ST7789V screen (pins from Cardputer v1.1 pin map:contentReference[oaicite:4]{index=4})
+spi:
+  clk_pin: GPIO36
+  mosi_pin: GPIO35
+  miso_pin: GPIO39
+
+# Simple display pages for feedback
+display:
+  - platform: st7789v
+    id: lcd
+    model: TTGO_TDISPLAY_135X240
+    cs_pin: GPIO37
+    dc_pin: GPIO34
+    reset_pin: GPIO33
+    backlight_pin: GPIO38
+    rotation: 90
+    pages:
+      - id: idle
+        lambda: |-
+          it.fill(Color(${color_black}));
+          it.printf(10, 10, id(font_medium), Color::WHITE, "Esperando...");
+      - id: listening
+        lambda: |-
+          it.fill(Color(${color_black}));
+          it.printf(10, 10, id(font_medium), Color(0, 255, 0), "Escuchando...");
+      - id: thinking
+        lambda: |-
+          it.fill(Color(${color_black}));
+          it.printf(10, 10, id(font_medium), Color(255, 255, 0), "Procesando...");
+      - id: replying
+        lambda: |-
+          it.fill(Color(${color_black}));
+          it.printf(10, 10, id(font_medium), Color(0, 0, 255), "Respondiendo...");
+      - id: error
+        lambda: |-
+          it.fill(Color(255, 0, 0));
+          it.printf(10, 10, id(font_medium), Color::WHITE, "Error");
+      - id: muted
+        lambda: |-
+          it.fill(Color(${color_black}));
+          it.printf(10, 10, id(font_medium), Color(255, 0, 0), "Micrófono silenciado");
+
+# Use a small font to save memory
+font:
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 300
+    id: font_medium
+    size: 16 # Reduced size
+
+# Button on GPIO0 toggles mute
+binary_sensor:
+  - platform: gpio
+    id: btn
+    name: "Button"
+    pin:
+      number: GPIO0
+      inverted: true
+    on_press:
+      then:
+        - switch.toggle: mute
+
+# Template switch to mute/unmute microphone
+switch:
+  - platform: template
+    id: mute
+    name: "Mute Microphone"
+    optimistic: true
+    on_turn_on:
+      - micro_wake_word.stop:
+      - voice_assistant.stop:
+      - script.execute: show_muted
+    on_turn_off:
+      - micro_wake_word.start:
+      - script.execute: show_idle
+
+# Automations to update the display
+script:
+  - id: show_idle
+    then:
+      - display.page.show: idle
+      - component.update: lcd
+  - id: show_listening
+    then:
+      - display.page.show: listening
+      - component.update: lcd
+  - id: show_thinking
+    then:
+      - display.page.show: thinking
+      - component.update: lcd
+  - id: show_replying
+    then:
+      - display.page.show: replying
+      - component.update: lcd
+  - id: show_error
+    then:
+      - display.page.show: error
+      - component.update: lcd
+  - id: show_muted
+    then:
+      - display.page.show: muted
+      - component.update: lcd

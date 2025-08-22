@@ -1,4 +1,3 @@
-
 substitutions:
   name: "m5stack-cardputer"
   friendly_name: M5 Cardputer
@@ -116,7 +115,7 @@ ota:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  manual_ip: 
+  manual_ip:
     gateway: 192.168.1.1
     subnet: 255.255.255.0
     static_ip: 192.168.1.108
@@ -126,6 +125,7 @@ wifi:
 captive_portal:
 
 i2s_audio:
+  
   i2s_lrclk_pin: GPIO43
   i2s_bclk_pin: GPIO41
   id: i2s_audio_a
@@ -151,11 +151,11 @@ audio_dac:
 microphone:
   - platform: i2s_audio
     id: external_mic
-    
+
     adc_type: external
     i2s_din_pin: GPIO46
     pdm: true
-    
+
 # - platform: i2s_audio
 #     id: media_out
 #     name: ESPHome I2S Media Player
@@ -167,7 +167,7 @@ speaker:
   - platform: i2s_audio
     dac_type: external
     i2s_dout_pin: GPIO42
-    
+
     bits_per_channel: 16bit
     audio_dac: es8311_dac
     #i2s_mode: primary
@@ -179,21 +179,18 @@ speaker:
     source_speakers:
       - id: announcement_spk_mixer_input
       - id: media_spk_mixer_input
-  
+
   - platform: resampler
     id: media_spk_resampling_input
     output_speaker: media_spk_mixer_input
-    
+
     #audio_dac: es8311_dac
-    buffer_duration: 
+    buffer_duration:
       milliseconds: 250
   - platform: resampler
     id: announcement_spk_resampling_input
     #audio_dac: es8311_dac
     output_speaker: announcement_spk_mixer_input
-    
-  
-    
 
 media_player:
   # - platform: i2s_audio
@@ -222,8 +219,8 @@ media_player:
     # announcement_pipeline:
     #   id: speaker_announcement_pipeline
     #   speaker: speaker_media_player_mixer
-      # sample_rate: 24000 # Reduce sample rate
-      # num_channels: "2"
+    # sample_rate: 24000 # Reduce sample rate
+    # num_channels: "2"
 
     files:
       - id: timer_finished_sound
@@ -410,8 +407,6 @@ image:
   defaults:
     resize: 240x135
     type: GRAYSCALE
-    
-
 
   images:
     - file: ${error_illustration_file}
@@ -763,15 +758,14 @@ switch:
     turn_on_action:
       then:
         - logger.log: "Speaker Enable Switch Turned On"
-        - media_player.speaker.play_on_device_media_file: timer_finished_sound
-            
+        # - media_player.speaker.play_on_device_media_file: timer_finished_sound
 
     turn_off_action:
       then:
         - logger.log: "Speaker Enable Switch Turned Off"
-        - media_player.speaker.play_on_device_media_file:
-            media_file: timer_finished_sound
-            announcement: True
+        # - media_player.speaker.play_on_device_media_file:
+        #     media_file: timer_finished_sound
+        #     announcement: True
 
   - platform: template
     name: Mute
@@ -807,6 +801,7 @@ switch:
           announcement: true
     on_turn_on:
       # Turn on the repeat mode and pause for 1000 ms between playlist items/repeats
+
       - lambda: |-
           id(speaker_media_player)
             ->make_call()
@@ -814,13 +809,11 @@ switch:
             .set_announcement(true)
             .perform();
           id(speaker_media_player)->set_playlist_delay_ms(speaker::AudioPipelineType::ANNOUNCEMENT, 1000);
-      - media_player.speaker.play_on_device_media_file:
-          media_file: timer_finished_sound
-          announcement: true
+      # - media_player.speaker.play_on_device_media_file:
+      #     media_file: timer_finished_sound
+      #     announcement: true
       - delay: 15min
       - switch.turn_off: timer_ringing
-
-
 
 micro_wake_word:
   id: mww
@@ -829,7 +822,6 @@ micro_wake_word:
   on_wake_word_detected:
     - voice_assistant.start:
         wake_word: !lambda return wake_word;
-
 
 voice_assistant:
   id: va
@@ -854,12 +846,12 @@ voice_assistant:
   on_stt_end:
     - text_sensor.template.publish:
         id: text_request
-        state: !lambda 'return x;'
+        state: !lambda "return x;"
     - script.execute: draw_display
   on_tts_start:
     - text_sensor.template.publish:
         id: text_response
-        state: !lambda 'return x;'
+        state: !lambda "return x;"
     - lambda: id(voice_assistant_phase) = ${voice_assist_replying_phase_id};
     - script.execute: draw_display
   on_end:
@@ -913,12 +905,9 @@ voice_assistant:
     - script.execute: draw_display
   on_timer_finished:
     - switch.turn_on: timer_ringing
-    - wait_until:
-        media_player.is_announcing
+    - wait_until: media_player.is_announcing
     - lambda: id(voice_assistant_phase) = ${voice_assist_timer_finished_phase_id};
     - script.execute: draw_display
-
-
 # # original
 # voice_assistant:
 #   id: va
@@ -962,13 +951,8 @@ voice_assistant:
 #             - not:
 #                 media_player.is_announcing:
 #             - not:
-#                 speaker.is_playing: 
+#                 speaker.is_playing:
 #                   id: speaker_media_player_i2s
-
-
-
-                  
-
 
 #     # Restart only mWW if enabled; streaming wake words automatically restart
 #     - if:

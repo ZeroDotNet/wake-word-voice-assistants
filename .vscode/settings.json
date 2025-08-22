@@ -24,4 +24,6 @@
       "-l"
     ]
   },
+  "workbench.editor.tabActionUnpinVisibility": false,
+  "workbench.editor.highlightModifiedTabs": true,
 }
